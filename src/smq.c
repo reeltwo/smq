@@ -381,11 +381,17 @@ int smq_init()
     init_called = 1;
     /* Generate uuid */
     uuid_generate(GUID);
+    int retryCount = 0;
     /* Get the IPv4 address */
-    if (0 >= smq_get_address_ipv4(ip_address))
+    while (0 >= smq_get_address_ipv4(ip_address))
     {
-        fprintf(stderr, "Error getting IPv4 address.\n");
-        return 0;
+        if (retryCount++ > 2)
+        {
+            fprintf(stderr, "Error getting IPv4 address.\n");
+            return 0;
+        }
+        printf("Waiting for IPv4 address.\n");
+        sleep(90); // Wait 90 seconds and try again
     }
     /* Get the broadcast address from the IPv4 address */
     if (0 >= smq_broadcast_ip_from_address_ip(ip_address, bcast_address))
