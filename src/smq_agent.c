@@ -11,9 +11,20 @@ int main(int argc, const char* argv[])
     /* Initialize smq */
     if (!smq_init()) return 1;
 
+    int trycount = 0;
 	const char* sport = (argc >= 2) ? argv[1] : "/dev/ttyUSB0";
 	int baud = (argc == 3) ? atoi(argv[2]) : 115200;
-	int fd = smq_subscribe_serial(sport, 0);
+	int fd = -1;
+    while (fd == -1)
+    {
+        fd = smq_subscribe_serial(sport, 0);
+        if (fd == -1)
+        {
+            sleep(5);
+            if (trycount++ < 10)
+                printf("Trying again ...\n");
+        }
+    }
 	smq_spin();
 	return smq_unsubscribe_serial(fd);
 }
