@@ -17,7 +17,7 @@ int main(int argc, const char* argv[])
 	int fd = -1;
     while (fd == -1)
     {
-        fd = smq_subscribe_serial(sport, 0);
+        fd = smq_subscribe_serial(sport, baud);
         if (fd == -1)
         {
             sleep(5);
