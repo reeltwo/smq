@@ -26,9 +26,14 @@ int main(int argc, const char* argv[])
 
     // /* Advertise the topic */
     if (!smq_advertise_hash(topic)) return 1;
-    for (int i = 0; i < 100; i++)
-	    smq_spin_once(10);
+
+    smq_spin_once(10);
+    smq_spin_once(10);
+
     smq_publish_hash(topic, (const uint8_t*)msg, strlen(msg));
+
+    smq_spin_once(10);
+    smq_spin_once(10);
 
     return 0;
 }

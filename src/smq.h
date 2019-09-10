@@ -46,12 +46,7 @@ typedef void (smq_timer_callback_t)(void* arg);
 // --------------------------------------------------
 // smsg - serial message: messages to and from serial
 
-int smsg_init_interal(smsg_t* smsg, const uint8_t * msg, size_t len);
-
 void smsg_failed(smsg_t* smsg);
-
-#define smsg_init(smsg, msg, len) \
-    ((setjmp((smsg)->jmp) == 0) ? smsg_init_interal(smsg, msg, len) : 1)
 
 void smsg_complete(smsg_t* smsg);
 

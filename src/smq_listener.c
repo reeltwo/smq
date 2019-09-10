@@ -29,6 +29,11 @@ static void PWM_callback(const char* topic_name, const uint8_t* msg, size_t len,
     printf("PWM : %s\n", msg);
 }
 
+static void MARC_callback(const char* topic_name, const uint8_t* msg, size_t len, void* arg)
+{
+    printf("MARC : %s\n", msg);
+}
+
 // void crc1F30_callback(const char* topic_name, const uint8_t* msg, size_t len)
 // {
 //     smsg_t smsg;
@@ -105,6 +110,7 @@ int main(int argc, const char* argv[])
     /* Subscribe */
     if (!smq_subscribe("DomeState", DomeState_callback, NULL)) printf("failed to subscribe to DomeState\n");
     if (!smq_subscribe("PWM", PWM_callback, NULL)) printf("failed to subscribe to PWM\n");
+    if (!smq_subscribe_hash("MARC", MARC_callback, NULL)) printf("failed to subscribe to MARC\n");
 
     /* Subscribe */
     //if (!smq_subscribe("BodyOrientation", body_orientation_callback)) printf("failed to subscribe to bla\n");

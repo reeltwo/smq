@@ -685,6 +685,7 @@ int smq_is_advertised(const char* topic_name)
 
 int smq_advertise(const char* topic_name)
 {
+    int rc;
     if (!init_called)
     {
         fprintf(stderr, "(smq_advertise) smq_init must be called first\n");
@@ -701,7 +702,8 @@ int smq_advertise(const char* topic_name)
     {
         return 0;
     }
-    return send_adv(topic_name);
+    rc = send_adv(topic_name);
+    return rc;
 }
 
 int smq_advertise_hash(const char* topic_name)
@@ -734,7 +736,7 @@ int smq_is_subscribed(const char* topic_name)
 {
     if (!init_called)
     {
-        fprintf(stderr, "(smq_is_advertised) smq_init must be called first\n");
+        fprintf(stderr, "(smq_is_subscribed) smq_init must be called first\n");
         return 0;
     }
     return (smq_topic_in_list(&subscribed_topics, topic_name) != NULL);
@@ -744,7 +746,7 @@ static int smq_is_subscribed_serial(const char* topic_name)
 {
     if (!init_called)
     {
-        fprintf(stderr, "(smq_is_advertised) smq_init must be called first\n");
+        fprintf(stderr, "(smq_is_subscribed_serial) smq_init must be called first\n");
         return 0;
     }
     smq_topic_t* topic = smq_topic_in_list(&subscribed_topics, topic_name);
