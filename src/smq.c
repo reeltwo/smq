@@ -1350,7 +1350,7 @@ int smq_process_serial(int fd, uint8_t id)
             smsg_read(fd, buffer, 1);
         id = 0xFF;
         REPORT_TYPE(buffer[0]);
-        printf("[0x%02X]\n", buffer[0]);
+	//printf("[0x%02X]\n", buffer[0]);
         switch (buffer[0])
         {
             case 0x00:
@@ -1358,18 +1358,18 @@ int smq_process_serial(int fd, uint8_t id)
                 uint16_t crc;
                 if (smsg_read(fd, &crc, sizeof(crc)) != sizeof(crc))
                     REPORT_READ_ERROR();
-                printf("    CRC : 0x%04X\n", crc);
+                //printf("    CRC : 0x%04X\n", crc);
                 uint16_t len;
                 if (smsg_read(fd, &len, sizeof(len)) != sizeof(len))
                     REPORT_READ_ERROR();
-                printf("    LEN : %d\n", len);
+                //printf("    LEN : %d\n", len);
                 uint16_t recrc = smq_calc_crc(&len, sizeof(len), 0);
                 if (crc == recrc)
                 {
                     if (smsg_read(fd, &crc, sizeof(crc)) != sizeof(crc))
                         REPORT_READ_ERROR();
 
-                    printf("    CRC : 0x%04X\n", crc);
+                    //printf("    CRC : 0x%04X\n", crc);
                     char* buffer = (char*)malloc(len+1);
                     if (buffer == NULL)
                         REPORT_MEM_ERROR();
@@ -1884,7 +1884,7 @@ static void smsg_callback(const char * topic_name, const uint8_t * msg, size_t l
     {
         crc = smq_string_hash(topic_name);
     }
-    printf("msg : %s\n", msg);
+    printf("msg : %.*s\n", (int)len, msg);
     json_tokener* tok = json_tokener_new();
     json_object* jobj = json_tokener_parse_ex(tok, (const char*)msg, len);
     if (jobj != NULL)
@@ -1897,7 +1897,7 @@ static void smsg_callback(const char * topic_name, const uint8_t * msg, size_t l
             // printf("smsg_read ");
             if (delim == 'R')
             {
-                printf("send CRC : 0x%04X\n", crc);
+                //printf("send CRC : 0x%04X\n", crc);
                 smq_send_raw_bytes(fd, &crc, sizeof(crc));
 
                 json_object_object_foreach(jobj, key, val)
