@@ -1278,7 +1278,7 @@ static int smsg_read(int fd, void* buf, size_t len)
         b = b + n;
     }
     int cnt = b - (char*)buf;
-#if 1
+#if 0
     if (cnt > 0)
     {
         printf("<==%d:[0x", cnt);
