@@ -112,6 +112,10 @@ int smq_process_serial(int fd, uint8_t);
 
 int smq_unsubscribe_serial(int fd);
 
+const char* smq_get_host();
+
+void smq_set_host(const char* host_name);
+
 // ----------------------------------------
 
 #ifdef __cplusplus

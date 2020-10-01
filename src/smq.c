@@ -908,7 +908,7 @@ static int handle_bcast_msg(uint8_t* buffer, int length)
 {
     smq_msg_header_t header;
     size_t header_size = deserialize_msg_header(&header, buffer, length);
-    printf("handle_bcast_msg type=%d\n", header.type);
+    // printf("handle_bcast_msg type=%d\n", header.type);
     if (header.type == SMQ_OP_ADV)
     {
         smq_adv_msg_t adv_msg;
@@ -1053,7 +1053,7 @@ int smq_spin_once(long timeout)
         deserialize_msg_header(&header, (uint8_t *) zmq_msg_data(&header_msg), zmq_msg_size(&header_msg));
         int more = zmq_msg_more(&header_msg);
         zmq_msg_close(&header_msg);
-        printf("header.type = %d\n", header.type);
+        // printf("header.type = %d\n", header.type);
         if (header.type == SMQ_OP_PUB)
         {
             /* Find subscriber */
@@ -1842,6 +1842,7 @@ int smq_process_serial(int fd, uint8_t id)
                             printf("advertise %s\n", topicName);
                         }
                     }
+                    json_object_object_add(jobj, "_src_", json_object_new_string(smq_get_host()));
                     if (smq_is_advertised(topicName))
                     {
                         const char* msg = json_object_to_json_string(jobj);
@@ -1889,6 +1890,16 @@ static void smsg_callback(const char * topic_name, const uint8_t * msg, size_t l
     json_object* jobj = json_tokener_parse_ex(tok, (const char*)msg, len);
     if (jobj != NULL)
     {
+        // Check if this message is a broadcast or intented for a specific host
+        json_object* jdst = json_object_object_get(jobj, "_dst");
+        if (jdst != NULL && strcmp(json_object_get_string(jdst), smq_get_host()) != 0)
+        {
+            json_object_put(jobj);
+            jobj = NULL;
+        }
+    }
+    if (jobj != NULL)
+    {
         char delim = 'D';
         smq_send_raw_bytes(fd, &delim, 1);
         for (;;)
@@ -1903,34 +1914,48 @@ static void smsg_callback(const char * topic_name, const uint8_t * msg, size_t l
                 json_object_object_foreach(jobj, key, val)
                 {
                     int val_type = json_object_get_type(val);
-                    switch (val_type)
+                    do
                     {
-                        case json_type_null:
-                            smq_send_string_hash(fd, key);
-                            smq_send_null(fd);
+                        if (strcmp(key, "_src") == 0 || strcmp(key, "_dst") == 0)
+                        {
+                            // don't serialize _src/_dst field
                             break;
-                        case json_type_boolean:
-                            smq_send_string_hash(fd, key);
-                            smq_send_boolean(fd, json_object_get_boolean(val));
-                            break;
-                        case json_type_double:
-                            smq_send_string_hash(fd, key);
-                            smq_send_float(fd, json_object_get_double(val));
-                            break;
-                        case json_type_int:
-                            smq_send_string_hash(fd, key);
-                            smq_send_int32(fd, json_object_get_int(val));
-                            break;
-                        case json_type_string:
-                            smq_send_string_hash(fd, key);
-                            smq_send_string(fd, json_object_get_string(val));
-                            break;
-                        case json_type_object:
-                            break;
-                        case json_type_array:
-                            // Support int array as byte-buffer
-                            break;
+                        }
+                        if (strcmp(key, "_dst") != 0)
+                        {
+                            if (val_type != json_type_string || strcmp(json_object_get_string(val), smq_get_host()) != 0)
+                                break;
+                        }
+                        switch (val_type)
+                        {
+                            case json_type_null:
+                                smq_send_string_hash(fd, key);
+                                smq_send_null(fd);
+                                break;
+                            case json_type_boolean:
+                                smq_send_string_hash(fd, key);
+                                smq_send_boolean(fd, json_object_get_boolean(val));
+                                break;
+                            case json_type_double:
+                                smq_send_string_hash(fd, key);
+                                smq_send_float(fd, json_object_get_double(val));
+                                break;
+                            case json_type_int:
+                                smq_send_string_hash(fd, key);
+                                smq_send_int32(fd, json_object_get_int(val));
+                                break;
+                            case json_type_string:
+                                smq_send_string_hash(fd, key);
+                                smq_send_string(fd, json_object_get_string(val));
+                                break;
+                            case json_type_object:
+                                break;
+                            case json_type_array:
+                                // Support int array as byte-buffer
+                                break;
+                        }
                     }
+                    while (0);
                 }
                 printf("============== smq_end1\n");
                 smq_end(fd);
@@ -1948,6 +1973,8 @@ static void smsg_callback(const char * topic_name, const uint8_t * msg, size_t l
                 smq_process_serial(fd, delim);
             }
         }
+        json_object_put(jobj);
+        jobj = NULL;
     }
     json_tokener_free(tok);
     printf("======callback DONE\n");
@@ -2170,4 +2197,22 @@ int smq_close_serial(int fd)
 int smq_unsubscribe_serial(int fd)
 {
     return smq_close_serial(fd);
+}
+
+// ---------------------------------------
+
+static char smq_host_name[255];
+
+const char* smq_get_host()
+{
+    if (!*smq_host_name)
+    {
+        gethostname(smq_host_name, sizeof(smq_host_name));
+    }
+    return smq_host_name;
+}
+
+void smq_set_host(const char* host_name)
+{
+    snprintf(smq_host_name, sizeof(smq_host_name), "%s", host_name);
 }

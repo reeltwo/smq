@@ -1,27 +1,32 @@
 #include <stdlib.h>
+#include <json-c/json.h>
 #include "smq.h"
 
-static void messageCallback(const char* topic_name, const uint8_t* msg, size_t len, void* arg)
+static void message_callback(const char* topic_name, const uint8_t* msg, size_t len, void* arg)
 {
-    printf("%s:%.*s\n", topic_name, (int)len, msg);
-    fflush(stdout);
+    printf("%s : %s\n", topic_name, msg);
 }
 
 int main(int argc, const char* argv[])
 {
-    int i;
+    const char* progname = argv[0];
+    const char* topic = argv[1];
+
+    if (argc != 2)
+    {
+        fprintf(stderr, "%s: <topic>\n", progname);
+        return 1;
+    }
     /* Initialize dzmq */
     if (!smq_init()) return 1;
 
     /* Subscribe */
-    for (i = 1; i < argc; i++)
-    {
-        const char* event = argv[i];
-        if (!smq_subscribe(event, messageCallback, NULL)) printf("failed to subscribe to '%s'\n", event);
-        if (!smq_subscribe_hash(event, messageCallback, NULL)) printf("failed to subscribe to '%s'\n", event);
-    }
+    if (!smq_advertise(topic)) return 1;
+    if (!smq_advertise_hash(topic)) return 1;
+    if (!smq_subscribe(topic, message_callback, NULL)) printf("failed to subscribe to %s\n", topic);
+    if (!smq_subscribe_hash(topic, message_callback, NULL)) printf("failed to subscribe to %s\n", topic);
+
     /* Spin */
-    fflush(stdout);
     if(!smq_spin()) return 1;
 
     return 0;
