@@ -1919,12 +1919,7 @@ static void smsg_callback(const char * topic_name, const uint8_t * msg, size_t l
                         if (strcmp(key, "_src") == 0 || strcmp(key, "_dst") == 0)
                         {
                             // don't serialize _src/_dst field
-                            break;
-                        }
-                        if (strcmp(key, "_dst") != 0)
-                        {
-                            if (val_type != json_type_string || strcmp(json_object_get_string(val), smq_get_host()) != 0)
-                                break;
+                            continue;
                         }
                         switch (val_type)
                         {
