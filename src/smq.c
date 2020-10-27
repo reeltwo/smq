@@ -25,6 +25,10 @@
 #include <mach/mach.h>
 #include <mach/clock.h>
 #endif
+#ifdef NDEBUG
+#undef assert()
+#define assert(s) s
+#endif
 
 // ---------------------------------------
 
@@ -1840,6 +1844,14 @@ int smq_process_serial(int fd, uint8_t id)
                         else
                         {
                             printf("advertise %s\n", topicName);
+                            if (!smq_advertise_hash(topicName))
+                            {
+                                printf("FAILED TO ADVERTISE HASH %s\n", topicName);
+                            }
+                            else
+                            {
+                                printf("advertise hash %s\n", topicName);
+                            }
                         }
                     }
                     json_object_object_add(jobj, "_src_", json_object_new_string(smq_get_host()));
