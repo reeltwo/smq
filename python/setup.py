@@ -4,7 +4,7 @@
 from distutils.core import setup, Extension
 
 pysmq_module = Extension('pysmq',
-                         include_dirs=['../smq'],
+                         include_dirs=['../src'],
                          libraries=['zmq', 'uuid', 'json-c'],
                          library_dirs=['../lib'],
                          sources = ['pysmq.c','../src/smq.c'])

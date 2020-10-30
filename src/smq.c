@@ -290,6 +290,50 @@ static int smq_broadcast_ip_from_address_ip(char* ip_addr, char* bcast_addr)
     return 1 ? 4 == toks : 0;
 }
 
+static int smq_get_interface_ipv4(const char* name, char* address)
+{
+    struct ifaddrs* ifAddrStruct = NULL;
+    struct ifaddrs* ifa = NULL;
+    void* tmpAddrPtr = NULL;
+
+    getifaddrs(&ifAddrStruct);
+    int address_found = 0;
+
+    for (ifa = ifAddrStruct; NULL != ifa; ifa = ifa->ifa_next)
+    {
+        /* If IPv4 */
+        if (strcmp(ifa->ifa_name, name) == 0)
+        {
+            if (AF_INET == ifa->ifa_addr->sa_family)
+            {
+                tmpAddrPtr = &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
+                inet_ntop(AF_INET, tmpAddrPtr, address, INET_ADDRSTRLEN);
+            }
+            else
+            {
+                continue;
+            }
+            /* stop at the first non 127.0.0.1 address */
+            if (address[0] && strncmp(address, "127.0.0.1", 9))
+            {
+                address_found = 1;
+                break;
+            }
+        }
+    }
+    /* Free address structure */
+    if (NULL != ifAddrStruct)
+    {
+        freeifaddrs(ifAddrStruct);
+    }
+    /* If address not found, zero it */
+    if (!address_found)
+    {
+        address[0] = 0;
+    }
+    return address_found;
+}
+
 /*
  * References:
  * http://stackoverflow.com/questions/212528/get-the-ip-address-of-the-machine
@@ -386,16 +430,34 @@ int smq_init()
     /* Generate uuid */
     uuid_generate(GUID);
     int retryCount = 0;
-    /* Get the IPv4 address */
-    while (0 >= smq_get_address_ipv4(ip_address))
+
+    const char* smq_ifname = getenv("SMQ_INTERFACE");
+    if (smq_ifname != NULL)
     {
-        if (retryCount++ > 2)
+        /* Get the IPv4 address */
+        while (0 >= smq_get_interface_ipv4(smq_ifname, ip_address))
         {
-            fprintf(stderr, "Error getting IPv4 address.\n");
-            return 0;
+            if (retryCount++ > 2)
+            {
+                fprintf(stderr, "Error getting IPv4 address.\n");
+                return 0;
+            }
+            printf("Waiting for IPv4 address.\n");
+            sleep(10); // Wait 10 seconds and try again
         }
-        printf("Waiting for IPv4 address.\n");
-        sleep(90); // Wait 90 seconds and try again
+    }
+    else
+    {
+        while (0 >= smq_get_address_ipv4(ip_address))
+        {
+            if (retryCount++ > 2)
+            {
+                fprintf(stderr, "Error getting IPv4 address.\n");
+                return 0;
+            }
+            printf("Waiting for IPv4 address.\n");
+            sleep(10); // Wait 10 seconds and try again
+        }
     }
     /* Get the broadcast address from the IPv4 address */
     if (0 >= smq_broadcast_ip_from_address_ip(ip_address, bcast_address))
