@@ -749,6 +749,13 @@ int smq_is_advertised(const char* topic_name)
     return (smq_topic_in_list(&published_topics, topic_name) != NULL);
 }
 
+int smq_is_advertised_hash(const char* topic_name)
+{
+    char buf[32];
+    sprintf(buf, "$crc%04X", smq_string_hash(topic_name));
+    return smq_is_advertised(buf);
+}
+
 int smq_advertise(const char* topic_name)
 {
     int rc;
@@ -1921,6 +1928,11 @@ int smq_process_serial(int fd, uint8_t id)
                     {
                         const char* msg = json_object_to_json_string(jobj);
                         smq_publish(topicName, (const uint8_t*)msg, strlen(msg));
+                    }
+                    if (smq_is_advertised_hash(topicName))
+                    {
+                        const char* msg = json_object_to_json_string(jobj);
+                        smq_publish_hash(topicName, (const uint8_t*)msg, strlen(msg));
                     }
                     json_object_put(jobj);
                     free(topicName);
