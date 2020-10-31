@@ -15,8 +15,7 @@ int main(int argc, const char* argv[])
 
     // /* Advertise the topic */
     if (!smq_advertise_hash("MARC")) return 1;
-    for (int i = 0; i < 100; i++)
-	    smq_spin_once(10);
+    smq_wait_for(1000);
 
     int sock;
     /* Create a best-effort datagram socket using UDP */

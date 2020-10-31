@@ -10,9 +10,20 @@ static PyObject* py_init(PyObject *self, PyObject *args)
     Py_RETURN_NONE;
 }
 
-static PyObject* py_spin(PyObject *self, PyObject *args)
+static PyObject* py_wait(PyObject *self, PyObject *args)
 {
-    smq_spin();
+    smq_wait();
+    Py_RETURN_NONE;
+}
+
+static PyObject* py_wait_for(PyObject *self, PyObject *args)
+{
+    long int millis;
+    if (!PyArg_ParseTuple(args, "l", &millis))
+    {
+        return NULL;
+    }
+    smq_wait_for(millis);
     Py_RETURN_NONE;
 }
 
@@ -134,7 +145,11 @@ static PyMethodDef pysmq_methods[] =
         "Initialize SMQ."
     },
     {
-        "spin", py_spin, METH_NOARGS,
+        "wait", py_wait, METH_NOARGS,
+        "Wait for network events."
+    },
+    {
+        "wait_for", py_wait_for, METH_VARARGS,
         "Wait for network events."
     },
     {

@@ -96,7 +96,9 @@ int smq_clear_timer();
 
 int smq_spin_once(long timeout_ms);
 
-int smq_spin();
+int smq_wait();
+
+int smq_wait_for(long millis);
 
 // ----------------------------------------
 

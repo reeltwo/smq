@@ -4,11 +4,9 @@ def main():
 	pysmq.init()
 
 	pysmq.advertise_hash('MARC');
-	pysmq.spin_once();
-	pysmq.spin_once();
-	pysmq.publish_hash('MARC', '{"cmd": "$123"}')
-	pysmq.spin_once();
-	pysmq.spin_once();
+	pysmq.wait_for(10000)
+	pysmq.publish_hash('MARC', '{"cmd": "$815"}')
+	pysmq.wait_for(100)
 
 if __name__ == "__main__":
 	main()

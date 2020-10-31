@@ -1153,10 +1153,28 @@ int smq_spin_once(long timeout)
     return 1;
 }
 
-int smq_spin()
+int smq_wait()
 {
     int ret = 0;
-    while (0 < (ret = smq_spin_once(10))) {}
+    while (0 < (ret = smq_spin_once(-1))) {}
+    return ret;
+}
+
+int smq_wait_for(long millis)
+{
+    int ret = 0;
+    struct timespec now;
+    long time_till_timer = -1;
+    smq_get_time_now(&now);
+    for (;;)
+    {
+        time_till_timer = smq_time_till(&now, millis);
+        if (time_till_timer <= 0)
+            break;
+        ret = smq_spin_once(time_till_timer);
+        if (ret < 0)
+            break;
+    }
     return ret;
 }
 

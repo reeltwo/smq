@@ -17,7 +17,7 @@ def main():
 
 	pysmq.advertise('BLEEP');
 	pysmq.subscribe_hash('FACE', doFaceTime)
-	pysmq.spin();
+	pysmq.wait();
 
 if __name__ == "__main__":
 	main()

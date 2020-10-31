@@ -25,6 +25,6 @@ int main(int argc, const char* argv[])
                 printf("Trying again ...\n");
         }
     }
-	smq_spin();
+	smq_wait();
 	return smq_unsubscribe_serial(fd);
 }

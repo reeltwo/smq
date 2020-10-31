@@ -60,7 +60,7 @@ int main(int argc, const char* argv[])
     if (!smq_subscribe_hash(topic, message_callback, NULL)) printf("failed to subscribe to %s\n", topic);
 
     /* Spin */
-    if(!smq_spin()) return 1;
+    if(!smq_wait()) return 1;
 
     return 0;
 }
