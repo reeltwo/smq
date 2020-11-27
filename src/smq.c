@@ -87,6 +87,7 @@ typedef struct
 typedef struct smq_topic_t
 {
     char name[SMQ_MAX_TOPIC_LENGTH];
+    char altname[SMQ_MAX_TOPIC_LENGTH];
     smq_msg_callback_t* callback;
     smq_msg_callback_t* scallback;
     struct smq_topic_t* next;
@@ -678,6 +679,7 @@ static int smq_topic_list_append(smq_topic_list_t* topic_list, const char* topic
     }
     new_topic->next = 0;
     strncpy(new_topic->name, topic, SMQ_MAX_TOPIC_LENGTH);
+    new_topic->altname[0] = '\0';
     new_topic->callback = callback;
     new_topic->scallback = NULL;
     new_topic->arg = arg;
@@ -897,9 +899,14 @@ static int smq_subscribe_ser(const char* topic_name, smq_msg_callback_t* callbac
 
 int smq_subscribe_hash(const char* topic_name, smq_msg_callback_t* callback, void* arg)
 {
-    char buf[32];
-    sprintf(buf, "$crc%04X", smq_string_hash(topic_name));
-    return smq_subscribe(buf, callback, arg);
+    char topic_hash[32];
+    sprintf(topic_hash, "$crc%04X", smq_string_hash(topic_name));
+    if (smq_subscribe(topic_hash, callback, arg))
+    {
+        smq_topic_t* topic = smq_topic_in_list(&subscribed_topics, topic_hash);
+        if (topic != NULL)
+            strncpy(topic->altname, topic_name, SMQ_MAX_TOPIC_LENGTH);
+    }
 }
 
 int smq_publish(const char* topic_name, const uint8_t* msg, size_t len)
@@ -1143,10 +1150,13 @@ int smq_spin_once(long timeout)
             assert(-1 != zmq_msg_recv(&data_msg, zmq_subscribe_sock, 0));
             size_t data_len = zmq_msg_size(&data_msg);
             uint8_t* data = (uint8_t *) zmq_msg_data(&data_msg);
+            const char* topic_name = topic;
+            if (*subscriber->altname != 0)
+                topic_name = subscriber->altname ;
             if (subscriber->scallback != NULL)
-                subscriber->scallback(topic, data, data_len, subscriber->arg);
+                subscriber->scallback(topic_name, data, data_len, subscriber->arg);
             if (subscriber->callback != NULL)
-                subscriber->callback(topic, data, data_len, subscriber->arg);
+                subscriber->callback(topic_name, data, data_len, subscriber->arg);
         }
         return 1;
     }
