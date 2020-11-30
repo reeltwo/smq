@@ -555,6 +555,17 @@ int smq_init()
     return 1;
 }
 
+int smq_shutdown()
+{
+    if (zmq_publish_sock != NULL)
+        zmq_close(zmq_publish_sock);
+    if (zmq_subscribe_sock != NULL)
+        zmq_close(zmq_subscribe_sock);
+    if (zmq_context != NULL)
+        zmq_ctx_destroy(zmq_context);
+    return 1;
+}
+
 static int sendto_bcast(unsigned char* buffer, size_t buffer_len)
 {
     return sendto(bcast_fd, buffer, buffer_len, 0, (struct sockaddr *) &dst_addr, sizeof(dst_addr));
@@ -1157,6 +1168,7 @@ int smq_spin_once(long timeout)
                 subscriber->scallback(topic_name, data, data_len, subscriber->arg);
             if (subscriber->callback != NULL)
                 subscriber->callback(topic_name, data, data_len, subscriber->arg);
+            zmq_msg_close(&data_msg);
         }
         return 1;
     }

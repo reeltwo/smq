@@ -74,6 +74,8 @@ uint64_t smq_current_time();
 
 int smq_init();
 
+int smq_shutdown();
+
 int smq_is_advertised(const char* topic_name);
 
 int smq_is_subscribed(const char* topic_name);
