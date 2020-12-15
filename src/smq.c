@@ -130,6 +130,9 @@ static void* timer_arg;
 static long timer_period;
 static struct timespec last_timer;
 
+static smq_msg_callback_t* global_callback;
+static void* global_callback_arg;
+
 static int register_file_descriptor(int fd)
 {
     if (poll_items_count >= SMQ_MAX_POLL_ITEMS)
@@ -839,6 +842,13 @@ static int smq_is_subscribed_serial(const char* topic_name)
     return (topic != NULL)? (topic->scallback != NULL) : 0;
 }
 
+int smq_subscribe_all(smq_msg_callback_t* callback, void* arg)
+{
+    global_callback = callback;
+    global_callback_arg = arg;
+    return 1;
+}
+
 int smq_subscribe(const char* topic_name, smq_msg_callback_t* callback, void* arg)
 {
     if (!init_called)
@@ -1168,6 +1178,8 @@ int smq_spin_once(long timeout)
                 subscriber->scallback(topic_name, data, data_len, subscriber->arg);
             if (subscriber->callback != NULL)
                 subscriber->callback(topic_name, data, data_len, subscriber->arg);
+            if (global_callback != NULL)
+                global_callback(topic_name, data, data_len, global_callback_arg);
             zmq_msg_close(&data_msg);
         }
         return 1;

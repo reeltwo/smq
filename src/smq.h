@@ -88,6 +88,8 @@ int smq_subscribe(const char* topic_name, smq_msg_callback_t* callback, void* ar
 
 int smq_subscribe_hash(const char* topic_name, smq_msg_callback_t* callback, void* arg);
 
+int smq_subscribe_all(smq_msg_callback_t* callback, void* arg);
+
 int smq_publish(const char* topic_name, const uint8_t * msg, size_t len);
 
 int smq_publish_hash(const char* topicName, const uint8_t *msg, size_t len);
