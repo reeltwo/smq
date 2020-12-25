@@ -12,7 +12,9 @@ static PyObject* py_init(PyObject *self, PyObject *args)
 
 static PyObject* py_wait(PyObject *self, PyObject *args)
 {
+    Py_BEGIN_ALLOW_THREADS
     smq_wait();
+    Py_END_ALLOW_THREADS
     Py_RETURN_NONE;
 }
 
@@ -23,13 +25,17 @@ static PyObject* py_wait_for(PyObject *self, PyObject *args)
     {
         return NULL;
     }
+    Py_BEGIN_ALLOW_THREADS
     smq_wait_for(millis);
+    Py_END_ALLOW_THREADS
     Py_RETURN_NONE;
 }
 
 static PyObject* py_spin_once(PyObject *self, PyObject *args)
 {
+    Py_BEGIN_ALLOW_THREADS
     smq_spin_once(10);
+    Py_END_ALLOW_THREADS
     Py_RETURN_NONE;
 }
 
