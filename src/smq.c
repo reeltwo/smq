@@ -2012,7 +2012,6 @@ static void smsg_callback(const char * topic_name, const uint8_t * msg, size_t l
 {
     int fd = smsg_callback_fd;
     uint16_t crc;
-    printf("======callback : topic_name=%s\n", topic_name);
     if (strncmp(topic_name, "$crc", 4) == 0)
     {
         int crcint;
@@ -2023,7 +2022,7 @@ static void smsg_callback(const char * topic_name, const uint8_t * msg, size_t l
     {
         crc = smq_string_hash(topic_name);
     }
-    printf("msg : %.*s\n", (int)len, msg);
+    printf("%s : %.*s\n", topic_name, (int)len, msg);
     json_tokener* tok = json_tokener_new();
     json_object* jobj = json_tokener_parse_ex(tok, (const char*)msg, len);
     if (jobj != NULL)
@@ -2090,15 +2089,12 @@ static void smsg_callback(const char * topic_name, const uint8_t * msg, size_t l
                     }
                     while (0);
                 }
-                printf("============== smq_end1\n");
                 smq_end(fd);
-                printf("============== smq_end2\n");
                 char ready = 'A';
                 if (write(fd, &ready, 1) != 1)
                 {
                     printf("FAIL\n");
                 }
-                printf("============== END\n");
                 break;
             }
             else if (delim == 0x00 || delim == 0x01)
@@ -2110,7 +2106,6 @@ static void smsg_callback(const char * topic_name, const uint8_t * msg, size_t l
         jobj = NULL;
     }
     json_tokener_free(tok);
-    printf("======callback DONE\n");
 }
 
 /// -----------------------------------------

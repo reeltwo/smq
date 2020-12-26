@@ -65,12 +65,14 @@ static PyObject* py_advertise_hash(PyObject *self, PyObject *args)
 
 static void py_message_callback(const char* topic, const uint8_t* msg, size_t len, void* arg)
 {
+    PyGILState_STATE state = PyGILState_Ensure();
     Py_ssize_t msglen = len;
     PyObject* callback = (PyObject*)arg;
     PyObject* arglist = Py_BuildValue("(ss#)", topic, (char*)msg, msglen);
     PyObject* result = PyEval_CallObject(callback, arglist);
     Py_XDECREF(result);
     Py_DECREF(arglist);
+    PyGILState_Release(state);
 }
 
 static PyObject* py_subscribe(PyObject *self, PyObject *args)
