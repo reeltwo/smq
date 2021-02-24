@@ -118,6 +118,7 @@ static char tcp_address[SMQ_MAX_ADDR_LENGTH];
 static void* zmq_context;
 static void* zmq_publish_sock;
 static void* zmq_subscribe_sock;
+static char zmq_subscribe_serial;
 static zmq_pollitem_t poll_items[SMQ_MAX_POLL_ITEMS];
 static size_t poll_items_count;
 
@@ -133,6 +134,8 @@ static struct timespec last_timer;
 static smq_msg_callback_t* global_callback;
 static void* global_callback_arg;
 
+// Needs updating can only monitor one socket and file descriptor
+
 static int register_file_descriptor(int fd)
 {
     if (poll_items_count >= SMQ_MAX_POLL_ITEMS)
@@ -147,6 +150,18 @@ static int register_file_descriptor(int fd)
     return poll_items_count;
 }
 
+static int unregister_file_descriptor(int fd)
+{
+    if (poll_items_count > 1 && poll_items[poll_items_count-1].fd == fd)
+    {
+        poll_items_count -= 1;
+        poll_items[poll_items_count].socket = 0;
+        poll_items[poll_items_count].fd = 0;
+        poll_items[poll_items_count].events = 0;
+    }
+    return poll_items_count;
+}
+
 static int register_socket(void* socket)
 {
     if (poll_items_count >= SMQ_MAX_POLL_ITEMS)
@@ -155,6 +170,7 @@ static int register_socket(void* socket)
         return 0;
     }
     poll_items[poll_items_count].socket = socket;
+    poll_items[poll_items_count].fd = 0;
     poll_items[poll_items_count].events = ZMQ_POLLIN;
     poll_items_count += 1;
     return poll_items_count;
@@ -296,6 +312,7 @@ static int smq_broadcast_ip_from_address_ip(char* ip_addr, char* bcast_addr)
 
 static int smq_get_interface_ipv4(const char* name, char* address)
 {
+    int retryCount = 0;
     struct ifaddrs* ifAddrStruct = NULL;
     struct ifaddrs* ifa = NULL;
     void* tmpAddrPtr = NULL;
@@ -303,27 +320,69 @@ static int smq_get_interface_ipv4(const char* name, char* address)
     getifaddrs(&ifAddrStruct);
     int address_found = 0;
 
-    for (ifa = ifAddrStruct; NULL != ifa; ifa = ifa->ifa_next)
+    char ifname[256];
+    while (!address_found && *name != '\0')
     {
-        /* If IPv4 */
-        if (strcmp(ifa->ifa_name, name) == 0)
+        const char* next = name;
+        char* sep = strchr(name, ',');
+        if (sep != NULL)
         {
-            if (AF_INET == ifa->ifa_addr->sa_family)
+            int len = sep-name;
+            if (len >= sizeof(ifname))
+                len = sizeof(ifname)-1;
+            strncpy(ifname, name, len);
+            ifname[len] = '\0';
+            next = sep+1;
+        }
+        else
+        {
+            snprintf(ifname, sizeof(ifname), "%s", name);
+            next += strlen(name);
+        }
+
+        printf("NAME : \"%s\"\n", name);
+        for (ifa = ifAddrStruct; NULL != ifa; ifa = ifa->ifa_next)
+        {
+            /* If IPv4 */
+            if (strcmp(ifa->ifa_name, ifname) == 0)
             {
-                tmpAddrPtr = &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
-                inet_ntop(AF_INET, tmpAddrPtr, address, INET_ADDRSTRLEN);
-            }
-            else
-            {
-                continue;
-            }
-            /* stop at the first non 127.0.0.1 address */
-            if (address[0] && strncmp(address, "127.0.0.1", 9))
-            {
-                address_found = 1;
-                break;
+                printf("CHECK %s == %s\n", ifa->ifa_name, ifname);
+                if (AF_INET == ifa->ifa_addr->sa_family)
+                {
+                    tmpAddrPtr = &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
+                    inet_ntop(AF_INET, tmpAddrPtr, address, INET_ADDRSTRLEN);
+                }
+                else
+                {
+                    continue;
+                }
+                /* stop at the first non 127.0.0.1 address that is not self-assigned */
+                if (address[0] && strncmp(address, "127.0.0.1", 9))
+                {
+                    if (strncmp(address, "169.", 4) == 0)
+                    {
+                        // wait 10 seconds and try interface again
+                        if (retryCount < 4)
+                        {
+                            printf("Retrying interface: %s [%s]\n", ifa->ifa_name, address);
+                            *address = '\0';
+                            retryCount += 1;
+                            sleep(10);
+                            getifaddrs(&ifAddrStruct);
+                            next = name;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        printf("Using interface: %s [%s]\n", ifa->ifa_name, address);
+                        address_found = 1;
+                        break;
+                    }
+                }
             }
         }
+        name = next;
     }
     /* Free address structure */
     if (NULL != ifAddrStruct)
@@ -355,7 +414,7 @@ static int smq_get_address_ipv4(char* address)
     for (ifa = ifAddrStruct; NULL != ifa; ifa = ifa->ifa_next)
     {
         /* If IPv4 */
-        if (AF_INET == ifa->ifa_addr->sa_family)
+        if (ifa->ifa_addr != NULL && ifa->ifa_addr->sa_family == AF_INET)
         {
             tmpAddrPtr = &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
             inet_ntop(AF_INET, tmpAddrPtr, address, INET_ADDRSTRLEN);
@@ -364,9 +423,10 @@ static int smq_get_address_ipv4(char* address)
         {
             continue;
         }
-        /* stop at the first non 127.0.0.1 address */
-        if (address[0] && strncmp(address, "127.0.0.1", 9))
+        /* stop at the first non 127.0.0.1 address that is not self-assigned */
+        if (address[0] && strncmp(address, "127.0.0.1", 9) && strncmp(address, "169.", 4))
         {
+            printf("Using interface: %s [%s]\n", ifa->ifa_name, address);
             address_found = 1;
             break;
         }
@@ -1109,7 +1169,8 @@ int smq_spin_once(long timeout)
         }
     }
     /* Check for serial messages */
-    if (poll_items_count > 1 && poll_items[2].revents & ZMQ_POLLIN)
+    if (zmq_subscribe_serial &&
+        poll_items_count > 1 && poll_items[2].revents & ZMQ_POLLIN)
     {
         smq_process_serial(poll_items[2].fd, 0xFF);
     }
@@ -2205,7 +2266,7 @@ static speed_t serial_baud_lookup(long baud)
     return baud;
 }
 
-int smq_open_serial(const char* serial_port, unsigned baud)
+int smq_open_serial(const char* serial_port, unsigned baud, char blocking)
 {
     int fd;
     int rc;
@@ -2285,7 +2346,9 @@ int smq_open_serial(const char* serial_port, unsigned baud)
 
     /* Control characters */
     termios.c_cc[VTIME] = 0; // Inter-character timer unused
-    termios.c_cc[VMIN]  = 1; // Blocking read until 1 character received
+    termios.c_cc[VMIN]  = 0; // Non-Blocking
+    if (blocking)
+        termios.c_cc[VMIN]  = 1; // Blocking read until 1 character received
 
     rc = tcsetattr(fd, TCSANOW, &termios);
     if (rc == -1)
@@ -2296,14 +2359,30 @@ int smq_open_serial(const char* serial_port, unsigned baud)
     return fd;
 }
 
+int smq_available(int fd)
+{
+    return (poll_items_count > 1 && poll_items[2].revents & ZMQ_POLLIN);
+}
+
+void smq_register_fd(int fd)
+{
+    register_file_descriptor(fd);
+}
+
+void smq_unregister_fd(int fd)
+{
+    unregister_file_descriptor(fd);
+}
+
 int smq_subscribe_serial(const char* serial_port, unsigned baud)
 {
-    int fd = smq_open_serial(serial_port, baud);
+    int fd = smq_open_serial(serial_port, baud, 1);
     if (fd == -1)
     {
         fprintf(stderr, "Failed to initialize SMQ serial port : %s\n", serial_port);
         return -1;
     }
+    zmq_subscribe_serial = 1;
     smq_reset_serial(fd);
     sleep(1);
 
@@ -2319,7 +2398,12 @@ int smq_subscribe_serial(const char* serial_port, unsigned baud)
 
 int smq_close_serial(int fd)
 {
-    return (fd != -1) ? close(fd) : -1;
+    if (fd != -1)
+    {
+        unregister_file_descriptor(fd);
+        return close(fd);
+    }
+    return -1;
 }
 
 int smq_unsubscribe_serial(int fd)

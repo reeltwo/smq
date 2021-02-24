@@ -11,6 +11,7 @@ all:
 	$(CC) src/smq_listener.c $(CFLAGS) -Llib $(LIBRARIES) -o bin/smq_listener
 	$(CC) src/smq_publish.c $(CFLAGS) -Llib $(LIBRARIES) -o bin/smq_publish
 	$(CC) src/smq_marcduino.c $(CFLAGS) -Llib $(LIBRARIES) -o bin/smq_marcduino
+	$(CC) src/smq_serial_relay.c $(CFLAGS) -Llib $(LIBRARIES) -o bin/smq_serial_relay
 
 clean:
 	rm -rf bin lib src/*.o

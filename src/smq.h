@@ -106,7 +106,7 @@ int smq_wait_for(long millis);
 
 // ----------------------------------------
 
-int smq_open_serial(const char* serial_port, unsigned speed);
+int smq_open_serial(const char* serial_port, unsigned speed, char blocking);
 
 int smq_close_serial(int fd);
 
@@ -117,6 +117,12 @@ int smq_subscribe_serial(const char* serial_port, unsigned speed);
 int smq_process_serial(int fd, uint8_t);
 
 int smq_unsubscribe_serial(int fd);
+
+void smq_register_fd(int fd);
+
+void smq_unregister_fd(int fd);
+
+int smq_available(int fd);
 
 const char* smq_get_host();
 
