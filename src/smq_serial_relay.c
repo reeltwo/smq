@@ -49,7 +49,7 @@ static char buildCommand(char ch, char* output_str, size_t output_size)
     {
         output_str[sPos]='\0';
         sPos = 0;
-        return 1;
+        return (output_str[0] != '\0');
     }
     output_str[sPos] = ch;
     if (sPos <= output_size-1)
