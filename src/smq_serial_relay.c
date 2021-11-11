@@ -20,7 +20,7 @@ static void MARC_callback(const char* topic_name, const uint8_t* msg, size_t len
         {
             const char* marccmd = json_object_get_string(jcmd);
             printf("MARC: %s\n", marccmd);
-            if ((*marccmd == '@' || *marccmd == '#') && fd != -1)
+            if ((*marccmd == '@' || *marccmd == '#' || *marccmd == ':') && fd != -1)
             {
                 char cr = '\r';
                 if (*marccmd == '@')
